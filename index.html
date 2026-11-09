@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcador Flip 7</title>
+<style>
+  :root{
+    --bg:#0f1220; --card:#1a1f35; --card2:#232a47; --txt:#f2f4ff; --mut:#9aa3c7;
+    --acc:#ffcc33; --acc2:#ff5c7a; --ok:#3ddc97; --line:#2e3658;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);}
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+  h1{font-size:1.5rem;margin:0;letter-spacing:.5px}
+  h1 span{color:var(--acc)}
+  h2{font-size:1rem;margin:0 0 10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+  .card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:14px;border:1px solid var(--line)}
+  button{font:inherit;border:0;border-radius:12px;padding:12px 14px;cursor:pointer;font-weight:700;color:#111;background:var(--acc)}
+  button.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  button.danger{background:var(--acc2);color:#fff}
+  button.sm{padding:8px 10px;font-size:.85rem;border-radius:10px}
+  button:disabled{opacity:.4}
+  input{font:inherit;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px;width:100%}
+  input:focus{outline:2px solid var(--acc);border-color:transparent}
+  .row{display:flex;gap:8px;align-items:center}
+  .grow{flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{background:var(--card2);border-radius:999px;padding:6px 8px 6px 12px;display:flex;align-items:center;gap:6px}
+  .chip b{font-weight:600}
+  .chip button{background:transparent;color:var(--mut);padding:2px 6px;font-size:1rem}
+  .mut{color:var(--mut);font-size:.85rem}
+  .player{background:var(--card2);border-radius:14px;padding:12px;margin-bottom:10px;position:relative;overflow:hidden}
+  .player.lead{outline:2px solid var(--acc)}
+  .player.win{outline:2px solid var(--ok)}
+  .ptop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .pname{font-weight:700;font-size:1.1rem}
+  .ptotal{font-size:1.8rem;font-weight:800}
+  .bar{height:8px;background:#11152a;border-radius:99px;margin:8px 0 6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px;transition:width .3s}
+  .player.win .bar i{background:var(--ok)}
+  .faltan{display:flex;justify-content:space-between;font-size:.9rem}
+  .faltan strong{color:var(--acc)}
+  .entry{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center;margin-bottom:8px}
+  .entry .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .entry input{text-align:center;padding:10px}
+  .entry input.bust{border-color:var(--acc2);color:var(--acc2)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600}
+  td.r{color:var(--mut)}
+  td.cell{cursor:pointer}
+  td.cell:hover{background:var(--card2)}
+  .scroll{overflow-x:auto}
+  .banner{background:linear-gradient(135deg,var(--ok),#1fa8c9);color:#06121a;border-radius:16px;padding:16px;margin-bottom:14px;text-align:center}
+  .banner h3{margin:0 0 4px;font-size:1.4rem}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .hidden{display:none!important}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10}
+  .modal .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;max-width:360px;width:100%}
+  .modal p{margin:0 0 14px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:.9rem;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .round-label{font-size:.85rem;color:var(--acc);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FLIP <span>7</span></h1>
+    <div class="row">
+      <span class="mut">Meta</span>
+      <input id="target" type="number" inputmode="numeric" min="1" style="width:80px;padding:8px;text-align:center">
+    </div>
+  </header>
+
+  <!-- CONFIGURACIÓN -->
+  <section id="setup" class="card">
+    <h2>Jugadores</h2>
+    <form id="addForm" class="row">
+      <input id="pname" class="grow" placeholder="Nombre del jugador" maxlength="20" autocomplete="off">
+      <button type="submit">Agregar</button>
+    </form>
+    <div id="chips" class="chips"></div>
+    <p class="mut" id="setupHint">Agrega al menos 2 jugadores.</p>
+    <button id="startBtn" style="width:100%" disabled>Empezar partida</button>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="game" class="hidden">
+    <div id="banner" class="banner hidden"></div>
+
+    <div class="card">
+      <h2>Marcador</h2>
+      <div id="board"></div>
+    </div>
+
+    <div class="card" id="entryCard">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">Registrar ronda</h2>
+        <span class="round-label" id="roundNo"></span>
+      </div>
+      <form id="roundForm">
+        <div id="entries"></div>
+        <p class="mut" style="margin:4px 0 10px">Vacío o "Bust" = 0 puntos.</p>
+        <button type="submit" style="width:100%">Guardar ronda</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">Historial</h2>
+        <button class="sec sm" id="undoBtn">↶ Deshacer última</button>
+      </div>
+      <div class="scroll"><table id="hist"></table></div>
+      <p class="mut" style="margin-bottom:0">Toca un puntaje para corregirlo.</p>
+    </div>
+
+    <div class="actions">
+      <button class="grow" id="newGameBtn">Nueva partida (mismos jugadores)</button>
+      <button class="sec grow" id="changePlayersBtn">Cambiar jugadores</button>
+    </div>
+  </section>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="box">
+    <p id="modalMsg"></p>
+    <input id="modalInput" type="number" inputmode="numeric" class="hidden" style="margin-bottom:14px">
+    <div class="actions">
+      <button class="sec grow" id="modalCancel">Cancelar</button>
+      <button class="grow" id="modalOk">Aceptar</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY = 'flip7-marcador-v1';
+let S = { players: [], rounds: [], target: 200, started: false };
+
+function load(){ try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && Array.isArray(d.players)) S = Object.assign(S,d); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function totals(){ return S.players.map((_,i)=> S.rounds.reduce((a,r)=> a + (Number(r[i])||0), 0)); }
+function winnerIdx(){
+  const t = totals(); const max = Math.max(...t);
+  if (!S.rounds.length || max < S.target) return [];
+  return t.map((v,i)=> v===max ? i : -1).filter(i=>i>=0);
+}
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800); }
+
+function ask(msg, {input=false, value=''}={}){
+  return new Promise(res=>{
+    $('modalMsg').textContent = msg;
+    const inp = $('modalInput');
+    inp.classList.toggle('hidden', !input); inp.value = value;
+    $('modal').classList.remove('hidden');
+    if (input) setTimeout(()=>{inp.focus(); inp.select();},50);
+    const done = ok => { $('modal').classList.add('hidden'); $('modalOk').onclick=$('modalCancel').onclick=null; res(ok ? (input ? inp.value : true) : null); };
+    $('modalOk').onclick = ()=>done(true);
+    $('modalCancel').onclick = ()=>done(false);
+  });
+}
+
+function render(){
+  $('target').value = S.target;
+  $('setup').classList.toggle('hidden', S.started);
+  $('game').classList.toggle('hidden', !S.started);
+
+  // chips
+  $('chips').innerHTML = S.players.map((p,i)=>`<span class="chip"><b>${esc(p)}</b><button data-rm="${i}" aria-label="Quitar">×</button></span>`).join('');
+  $('startBtn').disabled = S.players.length < 2;
+  $('setupHint').classList.toggle('hidden', S.players.length >= 2);
+
+  if (!S.started) return;
+
+  const t = totals(); const max = Math.max(...t); const wins = winnerIdx();
+  // banner
+  const b = $('banner');
+  if (wins.length){
+    b.classList.remove('hidden');
+    b.innerHTML = `<h3>🏆 ${wins.map(i=>esc(S.players[i])).join(' y ')} ${wins.length>1?'empatan':'gana'}</h3><div>${max} puntos en ${S.rounds.length} rondas</div>`;
+  } else b.classList.add('hidden');
+  $('entryCard').classList.toggle('hidden', wins.length > 0);
+
+  // board ordenado por puntos
+  const order = S.players.map((p,i)=>i).sort((a,c)=> t[c]-t[a]);
+  $('board').innerHTML = order.map((i,pos)=>{
+    const falta = Math.max(0, S.target - t[i]);
+    const pct = Math.min(100, Math.max(0, t[i]/S.target*100));
+    const cls = wins.includes(i) ? 'win' : (t[i]===max && max>0 && pos===0 ? 'lead' : '');
+    return `<div class="player ${cls}">
+      <div class="ptop"><span class="pname">${pos+1}. ${esc(S.players[i])}</span><span class="ptotal">${t[i]}</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="faltan"><span class="mut">${falta===0 ? '¡Llegó a la meta!' : 'Le faltan'}</span>${falta===0?'':`<strong>${falta} pts</strong>`}</div>
+    </div>`;
+  }).join('');
+
+  // entradas
+  $('roundNo').textContent = `Ronda ${S.rounds.length+1}`;
+  const prev = {}; document.querySelectorAll('#entries input').forEach(el=>prev[el.dataset.i]=el.value);
+  $('entries').innerHTML = S.players.map((p,i)=>`<div class="entry">
+      <span class="n">${esc(p)}</span>
+      <input type="number" inputmode="numeric" min="0" data-i="${i}" placeholder="0" value="${prev[i]??''}">
+      <button type="button" class="sec sm" data-bust="${i}">Bust</button>
+    </div>`).join('');
+
+  // historial
+  if (!S.rounds.length){ $('hist').innerHTML = `<tr><td class="mut">Aún no hay rondas.</td></tr>`; }
+  else {
+    $('hist').innerHTML = `<tr><th>#</th>${S.players.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>` +
+      S.rounds.map((r,ri)=>`<tr><td class="r">${ri+1}</td>${S.players.map((_,pi)=>`<td class="cell" data-r="${ri}" data-p="${pi}">${Number(r[pi])||0}</td>`).join('')}</tr>`).join('') +
+      `<tr><th>Σ</th>${t.map(v=>`<th style="color:var(--txt)">${v}</th>`).join('')}</tr>`;
+  }
+  $('undoBtn').disabled = !S.rounds.length;
+}
+
+// eventos
+$('addForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const n = $('pname').value.trim();
+  if (!n) return;
+  if (S.players.some(p=>p.toLowerCase()===n.toLowerCase())) return toast('Ese nombre ya existe');
+  S.players.push(n); $('pname').value=''; save(); render(); $('pname').focus();
+});
+$('chips').addEventListener('click', e=>{
+  const i = e.target.dataset.rm; if (i===undefined) return;
+  S.players.splice(+i,1); save(); render();
+});
+$('startBtn').onclick = ()=>{ S.started = true; S.rounds = []; save(); render(); };
+
+$('target').addEventListener('change', ()=>{
+  const v = parseInt($('target').value,10);
+  S.target = v>0 ? v : 200; save(); render();
+});
+
+$('entries').addEventListener('click', e=>{
+  const i = e.target.dataset.bust; if (i===undefined) return;
+  const inp = document.querySelector(`#entries input[data-i="${i}"]`);
+  inp.value = 0; inp.classList.add('bust');
+});
+$('entries').addEventListener('input', e=>{ if (e.target.tagName==='INPUT') e.target.classList.remove('bust'); });
+
+$('roundForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const vals = [...document.querySelectorAll('#entries input')].map(el=>{ const v=parseInt(el.value,10); return isNaN(v)||v<0 ? 0 : v; });
+  S.rounds.push(vals);
+  document.querySelectorAll('#entries input').forEach(el=>{el.value='';el.classList.remove('bust');});
+  save(); render();
+  const w = winnerIdx();
+  toast(w.length ? '¡Tenemos ganador!' : `Ronda ${S.rounds.length} guardada`);
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+$('hist').addEventListener('click', async e=>{
+  const c = e.target.closest('td.cell'); if (!c) return;
+  const r=+c.dataset.r, p=+c.dataset.p;
+  const v = await ask(`Ronda ${r+1} · ${S.players[p]}: nuevo puntaje`, {input:true, value:S.rounds[r][p]});
+  if (v===null) return;
+  const n = parseInt(v,10); S.rounds[r][p] = isNaN(n)||n<0 ? 0 : n; save(); render(); toast('Puntaje corregido');
+});
+
+$('undoBtn').onclick = async ()=>{
+  if (!S.rounds.length) return;
+  if (await ask(`¿Borrar la ronda ${S.rounds.length}?`)) { S.rounds.pop(); save(); render(); toast('Ronda eliminada'); }
+};
+$('newGameBtn').onclick = async ()=>{
+  if (!S.rounds.length || await ask('¿Empezar nueva partida con los mismos jugadores? Se borra el marcador actual.')) { S.rounds=[]; save(); render(); toast('Nueva partida'); }
+};
+$('changePlayersBtn').onclick = async ()=>{
+  if (!S.rounds.length || await ask('¿Cambiar jugadores? Se borra el marcador actual.')) { S.rounds=[]; S.started=false; save(); render(); }
+};
+
+load(); render();
+</script>
+</body>
+</html>
